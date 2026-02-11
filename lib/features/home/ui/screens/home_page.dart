@@ -15,20 +15,26 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    controller.fetchWeatherByLocation();
+    //controller.fetchWeatherByLocation();
     return Scaffold(
       backgroundColor: Colors.white70,
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 28.w),
-          child: SingleChildScrollView(
-            child: Obx(() {
-              if (controller.isLoading.value) {
-                return const HomeShimmer();
-              } else {
-                return _mainBody();
-              }
-            }),
+        child: RefreshIndicator.adaptive(
+          onRefresh: () async {
+           await controller.fetchWeatherByLocation();
+          },
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 28.w),
+            child: SingleChildScrollView(
+              physics: AlwaysScrollableScrollPhysics(),
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const HomeShimmer();
+                } else {
+                  return _mainBody();
+                }
+              }),
+            ),
           ),
         ),
       ),

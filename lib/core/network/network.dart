@@ -9,7 +9,6 @@ class DioClient {
     return Dio(
       BaseOptions(
         baseUrl:
-        
             dotenv.env['BASE_URL'] ?? "https://api.openweathermap.org/data/2.5",
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
