@@ -62,7 +62,7 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white70,
+      backgroundColor: const Color.fromARGB(179, 255, 255, 255),
       body: SafeArea(
         child: RefreshIndicator.adaptive(
           onRefresh: () async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/route_manager.dart';
 import 'package:weather_app/features/home/ui/screens/home_page.dart';
+import 'package:weather_app/features/splash/ui/screens/splash_screen.dart';
 import 'package:weather_app/init_bindings.dart';
 
 class WeatherApp extends StatelessWidget {
@@ -22,7 +23,7 @@ class WeatherApp extends StatelessWidget {
           home: child,
         );
       },
-      child: HomePage(),
+      child: SplashScreen(),
     );
   }
 }
