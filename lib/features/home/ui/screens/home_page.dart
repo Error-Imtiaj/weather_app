@@ -6,33 +6,85 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:weather_app/features/home/controller/home_controller.dart';
 import 'package:weather_app/features/home/ui/screens/home_page_shimmer.dart';
-import 'package:weather_app/features/home/ui/widgets/small_card.dart';
+import 'package:weather_app/features/home/ui/widgets/black_section.dart';
+import 'package:weather_app/features/home/ui/widgets/daily_summary.dart';
+import 'package:weather_app/features/home/ui/widgets/top_bar.dart';
 import 'package:weather_app/features/home/ui/widgets/weekly_box.dart';
 
-class HomePage extends StatelessWidget {
-  HomePage({super.key});
-  final controller = Get.put(HomeController());
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
+  final HomeController controller = Get.put(HomeController());
+
+  late AnimationController _pageAnimController;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pageAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+
+    _fadeAnim = CurvedAnimation(
+      parent: _pageAnimController,
+      curve: Curves.easeOut,
+    );
+
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _pageAnimController,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _pageAnimController.forward();
+  }
+
+  @override
+  void dispose() {
+    _pageAnimController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    //controller.fetchWeatherByLocation();
     return Scaffold(
       backgroundColor: Colors.white70,
       body: SafeArea(
         child: RefreshIndicator.adaptive(
           onRefresh: () async {
-           await controller.fetchWeatherByLocation();
+            _pageAnimController.reset();
+            await controller.fetchWeatherByLocation();
+            _pageAnimController.forward();
           },
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 28.w),
             child: SingleChildScrollView(
-              physics: AlwaysScrollableScrollPhysics(),
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Obx(() {
                 if (controller.isLoading.value) {
                   return const HomeShimmer();
-                } else {
-                  return _mainBody();
                 }
+                return FadeTransition(
+                  opacity: _fadeAnim,
+                  child: SlideTransition(
+                    position: _slideAnim,
+                    child: _mainBody(),
+                  ),
+                );
               }),
             ),
           ),
@@ -44,71 +96,11 @@ class HomePage extends StatelessWidget {
   Column _mainBody() {
     return Column(
       children: [
-        // PARIS NAME
-        // PARIS NAME / HEADER ROW
-        Row(
-          children: [
-            // Leading Menu Icon
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(
-                Iconsax.align_horizontally,
-                color: Colors.black,
-                size: 32.r, // Slightly adjusted size for better balance
-              ),
-              onPressed: () {},
-            ),
-
-            // Middle City Title - Use Expanded to handle long text
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12.w),
-                child: Obx(
-                  () => Text(
-                    controller.city.value,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow:
-                        TextOverflow.ellipsis, // This handles the long text
-                    style: GoogleFonts.poppins(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // Trailing Toggle Button
-            ElevatedButton(
-              onPressed: () {
-                controller.isFarenheight.value =
-                    !controller.isFarenheight.value;
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: Size(60.w, 35.h), // Consistent sizing
-                padding: EdgeInsets.symmetric(horizontal: 12.w),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                backgroundColor: Colors.black,
-                elevation: 0,
-              ),
-              child: Text(
-                !controller.isFarenheight.value ? "C" : "F",
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
+        /// TOP BAR
+        TopBar(controller: controller),
         Gap(20.h),
 
-        // FRIDAY
+        /// DATE
         Container(
           width: 160.w,
           height: 40.h,
@@ -130,7 +122,7 @@ class HomePage extends StatelessWidget {
         ),
         Gap(8),
 
-        // SUNNY
+        /// CONDITION
         Obx(
           () => Text(
             controller.condition.value,
@@ -141,85 +133,50 @@ class HomePage extends StatelessWidget {
           ),
         ),
 
-        //   Gap(8),
-
-        // DEGREE
+        /// TEMPERATURE (ANIMATED)
         Obx(
-          () => Text(
-            controller.isFarenheight.value
-                ? "${controller.temp.value.toStringAsFixed(1)}°"
-                : "${controller.farenheight.value.toStringAsFixed(1)}°",
-            style: GoogleFonts.lexend(fontSize: 110.sp),
+          () => AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            transitionBuilder: (child, animation) {
+              return ScaleTransition(scale: animation, child: child);
+            },
+            child: Text(
+              controller.isFarenheight.value
+                  ? "${controller.temp.value.toStringAsFixed(1)}°"
+                  : "${controller.farenheight.value.toStringAsFixed(1)}°",
+              key: ValueKey(controller.isFarenheight.value),
+              style: GoogleFonts.lexend(fontSize: 110.sp),
+            ),
           ),
         ),
 
-        // DAILY SUMMARY
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // title
-            Text(
-              "Daily Summary",
-              style: GoogleFonts.poppins(
-                fontSize: 22.sp,
-                color: Colors.black,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-
-            // sub text
-            Obx(
-              () => Text(
-                controller.dailySummary,
-                style: GoogleFonts.poppins(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-        Gap(16),
-
-        // CARD
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(20.r),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Obx(
-                () => SmallCard(
-                  title: "${controller.windSpeed.value} km/h",
-                  subtext: "wind",
-                  iconData: Icons.wind_power_outlined,
-                ),
-              ),
-
-              Obx(
-                () => SmallCard(
-                  title: "${controller.humidity.value}%",
-                  subtext: "humidity",
-                  iconData: Icons.water_drop_outlined,
-                ),
-              ),
-
-              Obx(
-                () => SmallCard(
-                  title: "${controller.visibility.value} km",
-                  subtext: "visibility",
-                  iconData: Icons.remove_red_eye_outlined,
-                ),
-              ),
-            ],
+        /// DAILY SUMMARY (FADE + SLIDE)
+        AnimatedOpacity(
+          opacity: 1,
+          duration: const Duration(milliseconds: 600),
+          child: AnimatedSlide(
+            offset: Offset.zero,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeOut,
+            child: DailySummary(controller: controller),
           ),
         ),
         Gap(16),
 
-        // WEEKLY FORECAST
+        /// BLACK INFO CARD
+        AnimatedOpacity(
+          opacity: 1,
+          duration: const Duration(milliseconds: 700),
+          child: AnimatedSlide(
+            offset: Offset.zero,
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOut,
+            child: BlackSection(controller: controller),
+          ),
+        ),
+        Gap(16),
+
+        /// WEEKLY FORECAST HEADER
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -235,25 +192,42 @@ class HomePage extends StatelessWidget {
           ],
         ),
         Gap(16),
+
+        /// WEEKLY FORECAST LIST (ANIMATED)
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Obx(
             () => Row(
               children: controller.dailyForecasts.map((day) {
-                return Padding(
-                  padding: EdgeInsets.only(right: 12.w),
-                  child: WeeklyBox(
-                    degree: !controller.isFarenheight.value
-                        ? "${controller.getTemperatureInFarenheight(day.temp).round()}°"
-                        : "${day.temp.round()}°",
-                    iconData: _mapIcon(day.icon),
-                    date: day.date,
+                return TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOut,
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Opacity(
+                        opacity: value,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: EdgeInsets.only(right: 12.w),
+                    child: WeeklyBox(
+                      degree: !controller.isFarenheight.value
+                          ? "${controller.getTemperatureInFarenheight(day.temp).round()}°"
+                          : "${day.temp.round()}°",
+                      iconData: _mapIcon(day.icon),
+                      date: day.date,
+                    ),
                   ),
                 );
               }).toList(),
             ),
           ),
         ),
+        Gap(30.h),
       ],
     );
   }
